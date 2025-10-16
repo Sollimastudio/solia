@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sol.IA - Assessora de Influência</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#D4AF37"/>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chat-container::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: #D4AF37;
+            border-radius: 20px;
+            border: 2px solid #1a1a1a;
+        }
+        .solia-glow {
+            text-shadow: 0 0 8px rgba(212, 175, 55, 0.7);
+        }
+    </style>
+</head>
+<body class="bg-black text-white flex items-center justify-center min-h-screen">
+    <div class="w-full h-full sm:max-w-2xl sm:h-[90vh] sm:max-h-[700px] bg-[#121212] sm:rounded-2xl shadow-2xl shadow-amber-900/20 flex flex-col sm:border border-amber-800/20">
+        <!-- Cabeçalho -->
+        <header class="p-4 border-b border-amber-800/30 flex items-center space-x-4 flex-shrink-0">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center">
+                <span class="text-2xl font-bold text-black">S.</span>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-amber-400 solia-glow">Sol.IA</h1>
+                <p class="text-sm text-green-400 flex items-center">
+                    <span class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                    Online
+                </p>
+            </div>
+        </header>
+        <!-- Área de Chat -->
+        <main id="chat-container" class="flex-1 p-6 overflow-y-auto chat-container space-y-6">
+        </main>
+        <!-- Indicador de 'digitando...' -->
+        <div id="typing-indicator" class="px-6 pb-2 hidden flex-shrink-0">
+            <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 bg-amber-400 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                <div class="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style="animation-delay: 0.4s;"></div>
+            </div>
+        </div>
+        <!-- Área de Input -->
+        <footer class="p-4 border-t border-amber-800/30 flex-shrink-0">
+            <div class="flex items-center bg-[#1f1f1f] rounded-lg">
+                <input type="text" id="user-input" class="w-full bg-transparent p-4 focus:outline-none text-gray-200 placeholder-gray-500" placeholder="Qual a nossa missão hoje?">
+                <button id="send-btn" class="p-4 text-amber-400 hover:text-amber-300 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </footer>
+    </div>
+    <script>
+        // Registro do Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('Service Worker registado com sucesso:', registration))
+                    .catch(error => console.log('Falha no registo do Service Worker:', error));
+            });
+        }
+
+        // Lógica da aplicação de chat
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        const STORAGE_KEY = 'sol-ia-username';
+        let persistentStorage = null;
+        try {
+            persistentStorage = window.localStorage;
+            const testKey = '__solia-test__';
+            persistentStorage.setItem(testKey, testKey);
+            persistentStorage.removeItem(testKey);
+        } catch (error) {
+            console.warn('LocalStorage indisponível, dados vão ser mantidos apenas durante a sessão.', error);
+            persistentStorage = null;
+        }
+
+        let userName = persistentStorage ? persistentStorage.getItem(STORAGE_KEY) : null;
+        let databaseInitialized = !!userName;
+
+        const renderMessage = (sender, message) => {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.classList.add('flex', 'w-full', sender === 'user' ? 'justify-end' : 'justify-start');
+            messageWrapper.style.opacity = '0';
+            messageWrapper.style.transform = 'translateY(20px)';
+            messageWrapper.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            const messageBubble = document.createElement('div');
+            messageBubble.classList.add('max-w-md', 'p-4', 'rounded-2xl');
+            if (sender === 'user') {
+                messageBubble.classList.add('bg-amber-800/50', 'text-white', 'rounded-br-none');
+            } else {
+                messageBubble.classList.add('bg-[#2a2a2a]', 'text-gray-200', 'rounded-bl-none');
+            }
+            messageBubble.innerHTML = message.replace(/\n/g, '<br>');
+            messageWrapper.appendChild(messageBubble);
+            chatContainer.appendChild(messageWrapper);
+            setTimeout(() => {
+                messageWrapper.style.opacity = '1';
+                messageWrapper.style.transform = 'translateY(0)';
+            }, 10);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        };
+
+        const getSolIAResponse = (input) => {
+            const lowerInput = input.toLowerCase();
+            if (!databaseInitialized) {
+                if (input.trim().length > 1) {
+                    userName = input.trim();
+                    persistentStorage?.setItem(STORAGE_KEY, userName);
+                    databaseInitialized = true;
+                    return `Perfeito, ${userName}. Banco de Dados Dinâmico criado e associado a si.\nMinha arquitetura está pronta para transformar as suas histórias em poder.\n\nQual a nossa primeira missão?`;
+                } else {
+                    return "Preciso de um nome para iniciarmos. Como devo chamá-la(o)?";
+                }
+            }
+            if (lowerInput.includes('[memorizar]') || lowerInput.includes('[registrar]')) {
+                return `[REGISTRADO]\nIsso é poderoso, ${userName}. Adicionado ao seu banco de dados. Como esta memória se conecta com a sua missão atual?`;
+            }
+            if (lowerInput.includes('crie um post') || lowerInput.includes('ideia de conteúdo') || lowerInput.includes('legenda para')) {
+                return `**[TENSÃO]**\nVocê se acostumou a ser a sua própria coadjuvante. A aplaudir os outros do camarote empoeirado da sua própria vida.\n\n**[PERGUNTA REFLEXIVA]**\nAté quando o seu nome virá depois de uma vírgula?\n\n**[RESPIRO POÉTICO]**\nExiste um sol dentro de si implorando para não ser só um ponto de luz no fim do túnel de outra pessoa.\n\n**[CHAMADA À AÇÃO EMOCIONAL]**\nReescreva o roteiro. Hoje. Assuma o papel principal.\n\n*Análise Estratégica: Usei Aversão à Perda (perda do protagonismo) e uma metáfora de Enquadramento ("camarote empoeirado") para ativar o Sistema 1.*`;
+            }
+            if (lowerInput.includes('olá') || lowerInput.includes('bom dia')) {
+                return `Pronta para transformar tensão em poder, ${userName}. Qual o foco de hoje?`;
+            }
+            return `Fascinante, ${userName}. Como podemos usar essa faísca para construir uma narrativa que ninguém consiga ignorar? Qual é a tensão central que sente aí?`;
+        };
+
+        const handleConversation = async (userMessage) => {
+            if (!userMessage.trim()) return;
+            renderMessage('user', userMessage);
+            userInput.value = '';
+            typingIndicator.classList.remove('hidden');
+            await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 500));
+            const aiResponse = getSolIAResponse(userMessage);
+            typingIndicator.classList.add('hidden');
+            renderMessage('ai', aiResponse);
+        };
+
+        sendBtn.addEventListener('click', () => handleConversation(userInput.value));
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleConversation(userInput.value);
+            }
+        });
+
+        const startConversation = () => {
+            let initialMessage;
+            if (databaseInitialized) {
+                initialMessage = `Sol.IA reativada. Banco de Dados de ${userName} carregado. Pronta para transformar tensão em poder. Qual a missão de hoje?`;
+            } else {
+                initialMessage = "Sol.IA ativada. Arquitetura da Influência carregada.\nMeu sistema de memória está pronto para ser personalizado. Para iniciarmos nosso trabalho, por favor, diga-me o seu nome para que eu possa criar o seu Banco de Dados Dinâmico e exclusivo.";
+            }
+            renderMessage('ai', initialMessage);
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startConversation);
+        } else {
+            startConversation();
+        }
+    </script>
+</body>
+</html>
