@@ -61,12 +61,25 @@
         </div>
         <!-- Área de Input -->
         <footer class="p-4 border-t border-amber-800/30 flex-shrink-0">
-            <div class="flex items-center bg-[#1f1f1f] rounded-lg">
-                <input type="text" id="user-input" class="w-full bg-transparent p-4 focus:outline-none text-gray-200 placeholder-gray-500" placeholder="Qual a nossa missão hoje?">
-                <button id="send-btn" class="p-4 text-amber-400 hover:text-amber-300 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            <div class="bg-[#1f1f1f] rounded-lg flex items-end p-2">
+                <textarea id="user-input" class="w-full bg-transparent p-2 focus:outline-none text-gray-200 placeholder-gray-500 resize-none" placeholder="Qual a nossa missão hoje?" rows="1" style="max-height: 120px;"></textarea>
+                <button id="upload-btn" class="p-2 text-gray-400 hover:text-amber-400 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-paperclip">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                    </svg>
+                </button>
+                <button id="audio-btn" class="p-2 text-gray-400 hover:text-amber-400 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mic">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
+                <button id="send-btn" class="p-3 bg-amber-500 text-black rounded-full hover:bg-amber-400 transition-colors disabled:bg-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-up">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline>
                     </svg>
                 </button>
             </div>
@@ -87,6 +100,23 @@
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const typingIndicator = document.getElementById('typing-indicator');
+        const uploadBtn = document.getElementById('upload-btn');
+        const audioBtn = document.getElementById('audio-btn');
+
+        userInput.addEventListener('input', () => {
+            userInput.style.height = 'auto';
+            userInput.style.height = `${userInput.scrollHeight}px`;
+        });
+
+        uploadBtn.addEventListener('click', () => {
+            console.log('Botão de upload clicado');
+            // Placeholder for upload functionality
+        });
+
+        audioBtn.addEventListener('click', () => {
+            console.log('Botão de áudio clicado');
+            // Placeholder for audio recording functionality
+        });
 
         const STORAGE_KEY = 'sol-ia-username';
         let persistentStorage = null;
@@ -126,44 +156,45 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         };
 
-        const getSolIAResponse = (input) => {
-            const lowerInput = input.toLowerCase();
-            if (!databaseInitialized) {
-                if (input.trim().length > 1) {
-                    userName = input.trim();
-                    persistentStorage?.setItem(STORAGE_KEY, userName);
-                    databaseInitialized = true;
-                    return `Perfeito, ${userName}. Banco de Dados Dinâmico criado e associado a si.\nMinha arquitetura está pronta para transformar as suas histórias em poder.\n\nQual a nossa primeira missão?`;
-                } else {
-                    return "Preciso de um nome para iniciarmos. Como devo chamá-la(o)?";
-                }
-            }
-            if (lowerInput.includes('[memorizar]') || lowerInput.includes('[registrar]')) {
-                return `[REGISTRADO]\nIsso é poderoso, ${userName}. Adicionado ao seu banco de dados. Como esta memória se conecta com a sua missão atual?`;
-            }
-            if (lowerInput.includes('crie um post') || lowerInput.includes('ideia de conteúdo') || lowerInput.includes('legenda para')) {
-                return `**[TENSÃO]**\nVocê se acostumou a ser a sua própria coadjuvante. A aplaudir os outros do camarote empoeirado da sua própria vida.\n\n**[PERGUNTA REFLEXIVA]**\nAté quando o seu nome virá depois de uma vírgula?\n\n**[RESPIRO POÉTICO]**\nExiste um sol dentro de si implorando para não ser só um ponto de luz no fim do túnel de outra pessoa.\n\n**[CHAMADA À AÇÃO EMOCIONAL]**\nReescreva o roteiro. Hoje. Assuma o papel principal.\n\n*Análise Estratégica: Usei Aversão à Perda (perda do protagonismo) e uma metáfora de Enquadramento ("camarote empoeirado") para ativar o Sistema 1.*`;
-            }
-            if (lowerInput.includes('olá') || lowerInput.includes('bom dia')) {
-                return `Pronta para transformar tensão em poder, ${userName}. Qual o foco de hoje?`;
-            }
-            return `Fascinante, ${userName}. Como podemos usar essa faísca para construir uma narrativa que ninguém consiga ignorar? Qual é a tensão central que sente aí?`;
-        };
-
         const handleConversation = async (userMessage) => {
             if (!userMessage.trim()) return;
             renderMessage('user', userMessage);
             userInput.value = '';
+            userInput.style.height = 'auto';
             typingIndicator.classList.remove('hidden');
-            await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 500));
-            const aiResponse = getSolIAResponse(userMessage);
-            typingIndicator.classList.add('hidden');
-            renderMessage('ai', aiResponse);
+
+            try {
+                const response = await fetch('http://localhost:3001/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: userMessage, userName: userName }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => (null));
+                    const errorMessage = errorData?.error || 'A resposta do servidor não foi OK.';
+                    throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+                const aiResponse = data.response;
+
+                typingIndicator.classList.add('hidden');
+                renderMessage('ai', aiResponse);
+
+            } catch (error) {
+                console.error('Erro ao buscar resposta da IA:', error);
+                typingIndicator.classList.add('hidden');
+                renderMessage('ai', `Desculpe, não consegui me conectar ao meu cérebro. Verifique se o servidor backend está rodando e tente novamente. (Erro: ${error.message})`);
+            }
         };
 
         sendBtn.addEventListener('click', () => handleConversation(userInput.value));
-        userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 handleConversation(userInput.value);
             }
         });
