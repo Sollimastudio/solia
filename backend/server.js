@@ -4,10 +4,15 @@ const express = require('express');
 const cors = require('cors');
 const OpenAI = require('openai');
 const fs = require('fs');
+const multer = require('multer');
 
 const app = express();
 const port = process.env.PORT || 3001;
 const DB_PATH = './db.json';
+
+// Configuração do Multer para upload de arquivos em memória
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Carregar o banco de dados
 let db = { conversations: [] };
@@ -89,6 +94,32 @@ app.post('/chat', async (req, res) => {
     } catch (error) {
         console.error('Erro ao chamar a API da OpenAI:', error);
         res.status(500).json({ error: 'Falha ao comunicar com a API da OpenAI.' });
+    }
+});
+
+// Rota de Transcrição de Áudio
+app.post('/transcribe', upload.single('audio'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Nenhum arquivo de áudio enviado.' });
+    }
+
+    try {
+        // Salvar o buffer em um arquivo para enviar para a API da OpenAI
+        const audioPath = './audio.webm';
+        fs.writeFileSync(audioPath, req.file.buffer);
+
+        const transcription = await openai.audio.transcriptions.create({
+            model: 'whisper-1',
+            file: fs.createReadStream(audioPath),
+        });
+
+        fs.unlinkSync(audioPath); // Apagar o arquivo temporário
+
+        res.json({ transcription: transcription.text });
+
+    } catch (error) {
+        console.error('Erro ao transcrever o áudio:', error);
+        res.status(500).json({ error: 'Falha ao transcrever o áudio.' });
     }
 });
 

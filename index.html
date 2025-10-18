@@ -102,6 +102,9 @@
         const typingIndicator = document.getElementById('typing-indicator');
         const uploadBtn = document.getElementById('upload-btn');
         const audioBtn = document.getElementById('audio-btn');
+        let mediaRecorder;
+        let isRecording = false;
+        let audioChunks = [];
 
         userInput.addEventListener('input', () => {
             userInput.style.height = 'auto';
@@ -113,9 +116,46 @@
             // Placeholder for upload functionality
         });
 
-        audioBtn.addEventListener('click', () => {
-            console.log('Botão de áudio clicado');
-            // Placeholder for audio recording functionality
+        audioBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        audioChunks = [];
+                        const formData = new FormData();
+                        formData.append('audio', audioBlob);
+
+                        try {
+                            const response = await fetch('http://localhost:3001/transcribe', {
+                                method: 'POST',
+                                body: formData,
+                            });
+                            const data = await response.json();
+                            if (response.ok) {
+                                handleConversation(data.transcription);
+                            } else {
+                                renderMessage('ai', `Erro na transcrição: ${data.error}`);
+                            }
+                        } catch (error) {
+                            renderMessage('ai', `Erro ao enviar áudio: ${error.message}`);
+                        }
+                    };
+                    mediaRecorder.start();
+                    isRecording = true;
+                    audioBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-stop-circle"><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></svg>`;
+                } catch (error) {
+                    renderMessage('ai', 'Não consegui acessar o microfone. Verifique as permissões no seu navegador.');
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                audioBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mic"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
+            }
         });
 
         const STORAGE_KEY = 'sol-ia-username';
